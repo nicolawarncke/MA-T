@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>open source | Nicola Warncke</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+    
+    <style>
+        /* --- CSS VARIABLEN --- */
+        :root {
+            --accent-color: #cdb7d4; 
+            --text-on-accent: #000;  
+        }
+
+        /* --- BASIC --- */
+        * { box-sizing: border-box; }
+        
+        body {
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #000;
+            overscroll-behavior: none;
+        }
+
+        /* --- HEADER (Titel & Info) --- */
+        .top-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 25px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 150;
+            pointer-events: none; 
+            font-size: 14px;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .header-title {
+            font-weight: bold;
+            max-width: 50%;
+        }
+
+        .header-subtext {
+            text-align: right;
+            max-width: 40%;
+            color: #666;
+            font-weight: 300;
+        }
+
+        /* --- BÜHNE --- */
+        .stage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 3500px;
+            z-index: 1;
+            padding: 10px; 
+        }
+
+        /* --- BUCH CONTAINER --- */
+        .book-wrapper {
+            /* Desktop Standard */
+            max-height: 75vh; 
+            max-width: 85vw; 
+            
+            height: auto;
+            width: auto;
+            transform-style: preserve-3d;
+            transform: rotateX(0deg);
+            
+            box-shadow: none; 
+        }
+
+        /* --- MOBILE ANPASSUNG (Responsive) --- */
+        @media (max-width: 768px) {
+            /* 1. Header anpassen (Linksbuendig) */
+            .top-header {
+                padding: 15px 20px;
+                flex-direction: column;
+                align-items: flex-start; /* Links ausrichten */
+                text-align: left;       /* Text linksbündig */
+                background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0));
+            }
+            .header-title {
+                font-size: 11px;
+                max-width: 100%;
+                margin-bottom: 0;
+            }
+            .header-subtext {
+                display: none; 
+            }
+
+            /* 2. Buch Größe */
+            .book-wrapper {
+                max-width: 95vw; 
+                max-height: 60vh; /* Genug Platz für Header oben und Controls unten */
+                margin-top: 20px;
+            }
+            
+            /* 3. Pfeile auf gleiche Höhe wie Wenden-Button */
+            .nav-btn {
+                top: auto !important;
+                bottom: 28px !important; /* Auf einer Linie mit Flip-Button (ca. 30px) */
+                transform: none !important;
+                padding: 10px !important;
+                font-size: 24px !important;
+                background: transparent !important; 
+                width: 40px; /* Feste Breite für Touch */
+                text-align: center;
+            }
+            .nav-prev { left: 10px !important; }
+            .nav-next { right: 10px !important; }
+            
+            /* 4. Wende-Button mittig */
+            .flip-btn-container {
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                bottom: 30px !important;
+                width: max-content;
+            }
+            .flip-btn {
+                padding: 10px 20px !important;
+                font-size: 11px !important;
+                white-space: nowrap;
+            }
+
+            /* 5. Seitenzahl */
+            .page-info {
+                display: none !important;
+            }
+
+            .zoom-close-btn {
+                top: 10px !important;
+                right: 10px !important;
+            }
+
+            .scrub-tooltip {
+                display: none !important;
+            }
+        }
+
+        /* SEITEN */
+        .page { background-color: #fff; overflow: hidden; }
+        .page img {
+            width: 100%; height: 100%;
+            object-fit: contain; 
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+            cursor: zoom-in; 
+        }
+        
+        .page-ghost {
+            background-color: transparent !important;
+            box-shadow: none !important;
+            cursor: default !important;
+        }
+
+        /* --- UI ELEMENTE (Desktop Defaults) --- */
+        .nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            font-family: sans-serif;
+            font-weight: 80;
+            font-size: 30px;
+            color: #000000;
+            cursor: pointer;
+            z-index: 100;
+            padding: 30px;
+            outline: none;
+            transition: color 0.3s, transform 0.3s;
+        }
+        .nav-btn:hover { color: var(--accent-color); }
+        .nav-prev { left: 10px; }
+        .nav-next { right: 10px; }
+
+        .flip-btn-container {
+            position: fixed;
+            bottom: 30px; 
+            left: 40px; 
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flip-btn {
+            background-color: var(--accent-color);
+            color: var(--text-on-accent);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px; 
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.5s;
+        }
+        .flip-btn:hover { transform: scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+
+        .page-info {
+            position: fixed;
+            bottom: 38px; 
+            right: 40px;
+            z-index: 90;
+            pointer-events: none;
+            text-align: right;
+        }
+        .page-counter {
+            font-size: 12px;
+            color: #000;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums; 
+        }
+
+        /* --- INTERAKTIVE FORTSCHRITTSLEISTE --- */
+        .progress-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30px; 
+            z-index: 200;
+            cursor: pointer;
+            background: transparent;
+        }
+        
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 6px; 
+            background-color: var(--accent-color); 
+            width: 0%;
+            transition: width 0.2s ease-out; 
+            pointer-events: none; 
+        }
+        
+        .progress-container:hover .progress-bar { height: 10px; }
+
+        /* --- THUMBNAIL TOOLTIP --- */
+        .scrub-tooltip {
+            position: absolute;
+            bottom: 35px; 
+            left: 0;
+            transform: translateX(-50%); 
+            background-color: none;
+            pointer-events: none; 
+            opacity: 0;
+            transition: opacity 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 300;
+        }
+        .scrub-tooltip.visible { opacity: 1; }
+        .scrub-image {
+            width: 60px; height: auto; object-fit: contain;
+            background: transparent; margin-bottom: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background: white;
+        }
+        .scrub-text { font-size: 10px; font-weight: bold; color: #333; background: white; padding: 2px 5px; border-radius: 4px; }
+
+        /* --- ZOOM OVERLAY --- */
+        .zoom-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(255, 255, 255, 0.95);
+            z-index: 1000; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; cursor: zoom-out; 
+            transition: opacity 0.3s ease;
+        }
+        .zoom-overlay.active { opacity: 1; pointer-events: all; }
+        .zoom-overlay img {
+            max-width: 95%; max-height: 95%; object-fit: contain;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+
+        .zoom-close-btn {
+            position: absolute; top: 30px; right: 40px;
+            font-size: 40px; color: #333; cursor: pointer;
+            z-index: 1001; line-height: 1; padding: 10px;
+            transition: color 0.2s, transform 0.2s; font-family: sans-serif; font-weight: 100;
+        }
+        .zoom-close-btn:hover { color: var(--accent-color); }
+
+    </style>
+</head>
+<body>
+
+    <div class="top-header">
+        <div class="header-title">open source – Strategie für einen inklusiven Bildungs- und Gemeinschaftsort in Nürnberg</div>
+        <div class="header-subtext">
+            Nicola Warncke<br>
+            Masterarbeit Architektur<br>
+            Technische Hochschule Nürnberg, WiSe 2025/26
+        </div>
+    </div>
+
+    <div class="zoom-overlay" id="zoomOverlay" onclick="closeZoom()">
+        <div class="zoom-close-btn" onclick="closeZoom()">&times;</div>
+        <img id="zoomImage" src="" alt="Zoom">
+    </div>
+
+    <div class="scrub-tooltip" id="scrubTooltip">
+        <img class="scrub-image" id="scrubImage" src="" alt="">
+        <span class="scrub-text" id="scrubText">Seite 1</span>
+    </div>
+
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <button class="nav-btn nav-prev" onclick="safePrev()">&lt;</button>
+    <button class="nav-btn nav-next" onclick="safeNext()">&gt;</button>
+    
+    <div class="flip-btn-container">
+        <button class="flip-btn" onclick="flipBookAction()">
+            <span id="flipBtnText">Zu Teil 2 wechseln ↻</span>
+        </button>
+    </div>
+
+    <div class="page-info">
+        <div class="page-counter" id="pageCounter"></div>
+    </div>
+
+    <div class="stage" id="stageContainer"></div>
+
+    <script>
+        // --- KONFIGURATION ---
+        const config = {
+            part1: {
+                id: 1,
+                btnText: "Buch wenden ↻",
+                color: "#cdb7d4", 
+                baseUrl: "./Teil-1/",
+                prefix: "Booklet_Teil%201_Seite-", 
+                extension: ".jpg",
+                count: 136 
+            },
+            part2: {
+                id: 2,
+                btnText: "Buch wenden ↻",
+                color: "#f7d958", 
+                baseUrl: "./Teil-2/",
+                prefix: "Booklet_Teil%202_Seite-",
+                extension: ".jpg",
+                count: 106 
+            }
+        };
+
+        // --- VARIABLEN ---
+        let currentPart = 1;
+        let bookInstance = null;
+        let currentBookElement = null;
+        let currentConfig = config.part1;
+        
+        const stageContainer = document.getElementById('stageContainer');
+        const pageCounter = document.getElementById('pageCounter');
+        const flipBtnText = document.getElementById('flipBtnText');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+        const rootStyle = document.documentElement.style;
+        
+        // UI
+        const zoomOverlay = document.getElementById('zoomOverlay');
+        const zoomImage = document.getElementById('zoomImage');
+        const scrubTooltip = document.getElementById('scrubTooltip');
+        const scrubImage = document.getElementById('scrubImage');
+        const scrubText = document.getElementById('scrubText');
+
+        function pad(n) { return n < 10 ? '0'+n : n; }
+
+        function preloadOtherCover(currentCfg) {
+            const otherCfg = (currentCfg.id === 1) ? config.part2 : config.part1;
+            const coverUrl = `${otherCfg.baseUrl}${otherCfg.prefix}${pad(1)}${otherCfg.extension}`;
+            const img = new Image();
+            img.src = coverUrl;
+        }
+
+        function getImagesHTML(cfg) {
+            let html = '';
+            html += `<div class="page page-ghost"></div>`;
+            for(let i=1; i<=cfg.count; i++) {
+                const url = `${cfg.baseUrl}${cfg.prefix}${pad(i)}${cfg.extension}`;
+                html += `<div class="page" onclick="openZoom('${url}')"><img src="${url}" loading="lazy" /></div>`;
+            }
+            return html;
+        }
+
+        // --- ZOOM ---
+        function openZoom(url) {
+            zoomImage.src = url;
+            zoomOverlay.classList.add('active');
+        }
+        function closeZoom() {
+            zoomOverlay.classList.remove('active');
+            setTimeout(() => { zoomImage.src = ""; }, 300); 
+        }
+
+        // --- MOUSE / SCRUBBING ---
+        function getPageFromMouse(e, element) {
+            const rect = element.getBoundingClientRect();
+            let clickX = e.clientX - rect.left;
+            if(clickX < 0) clickX = 0;
+            if(clickX > rect.width) clickX = rect.width;
+            const percentage = clickX / rect.width;
+            let targetPage = Math.ceil(percentage * currentConfig.count);
+            if (targetPage < 1) targetPage = 1;
+            if (targetPage > currentConfig.count) targetPage = currentConfig.count;
+            return targetPage;
+        }
+
+        progressContainer.addEventListener('mousemove', function(e) {
+            if (!bookInstance) return;
+            const targetPage = getPageFromMouse(e, this);
+            const rect = this.getBoundingClientRect();
+            const clickX = e.clientX - rect.left; 
+            let leftPos = clickX + rect.left;
+            if (leftPos > window.innerWidth - 70) leftPos = window.innerWidth - 70;
+            if (leftPos < 70) leftPos = 70;
+
+            scrubTooltip.style.left = leftPos + 'px';
+            scrubTooltip.classList.add('visible');
+            scrubText.innerText = `Seite ${targetPage}`;
+            const imgUrl = `${currentConfig.baseUrl}${currentConfig.prefix}${pad(targetPage)}${currentConfig.extension}`;
+            scrubImage.src = imgUrl;
+        });
+
+        progressContainer.addEventListener('mouseleave', function() {
+            scrubTooltip.classList.remove('visible');
+        });
+
+        progressContainer.addEventListener('click', function(e) {
+            if (!bookInstance) return;
+            const targetPage = getPageFromMouse(e, this);
+            bookInstance.flip(targetPage);
+        });
+
+        // --- UI UPDATE ---
+        function updateUI(index, totalPages, cfg) {
+            let realPage = 1;
+            if (index > 1) { realPage = index; }
+            pageCounter.innerText = `Seite ${realPage} / ${totalPages}`;
+            
+            const progress = (realPage / totalPages) * 100;
+            progressBar.style.width = `${progress}%`;
+            
+            rootStyle.setProperty('--accent-color', cfg.color);
+            flipBtnText.innerText = cfg.btnText;
+        }
+
+        // --- LOAD BOOK ---
+        function loadBook(cfg) {
+            currentConfig = cfg; 
+            preloadOtherCover(cfg);
+
+            if (bookInstance) { bookInstance.destroy(); bookInstance = null; }
+            stageContainer.innerHTML = ''; 
+            
+            const newDiv = document.createElement('div');
+            newDiv.className = 'book-wrapper';
+            
+            const needsAnimation = (currentBookElement !== null);
+            if (needsAnimation) {
+                newDiv.style.transform = "rotateX(-90deg)";
+                newDiv.style.transition = "none"; 
+            }
+
+            newDiv.innerHTML = getImagesHTML(cfg);
+            stageContainer.appendChild(newDiv);
+            currentBookElement = newDiv;
+            updateUI(0, cfg.count, cfg);
+
+            if (needsAnimation) {
+                setTimeout(() => {
+                    newDiv.style.transition = "transform 0.5s ease-out";
+                    newDiv.style.transform = "rotateX(0deg)";
+                }, 50);
+            }
+
+            setTimeout(() => {
+                bookInstance = new St.PageFlip(newDiv, {
+                    width: 2100, height: 2800, size: 'stretch',
+                    minWidth: 100, maxWidth: 3000, minHeight: 100, maxHeight: 3000,
+                    drawShadow: true, maxShadowOpacity: 0.15, useMouseEvents: false, 
+                    showCover: false, usePortrait: false, mobileScrollSupport: false,
+                    startPage: 0, flippingTime: 500 
+                });
+                bookInstance.loadFromHTML(newDiv.querySelectorAll('.page'));
+                bookInstance.on('flip', (e) => updateUI(e.data, cfg.count, cfg));
+            }, 100);
+        }
+
+        // --- FLIP ACTION ---
+        function flipBookAction() {
+            if(!bookInstance) return;
+            const currentIndex = bookInstance.getCurrentPageIndex();
+            if (currentIndex > 1) {
+                bookInstance.flip(0); 
+                setTimeout(() => { executeRotation(); }, 800); 
+            } else {
+                executeRotation();
+            }
+        }
+
+        function executeRotation() {
+            if(!currentBookElement) return;
+            const nextCfg = (currentPart === 1) ? config.part2 : config.part1;
+            const coverUrl = `${nextCfg.baseUrl}${nextCfg.prefix}${pad(1)}${nextCfg.extension}`;
+
+            currentBookElement.style.transition = "transform 0.5s ease-in";
+            currentBookElement.style.transform = "rotateX(90deg)";
+
+            setTimeout(() => {
+                currentBookElement.innerHTML = `
+                    <div style="width:100%; height:100%; background:white; display:flex; justify-content:center; align-items:center;">
+                         <img src="${coverUrl}" style="height:100%; width:auto; max-width:50%; margin-left:50%; object-fit:contain;" />
+                    </div>`;
+                currentBookElement.style.transition = "none";
+                currentBookElement.style.transform = "rotateX(-90deg)";
+                void currentBookElement.offsetWidth; 
+                currentPart = (currentPart === 1) ? 2 : 1;
+                setTimeout(() => { loadBook(nextCfg); }, 40); 
+            }, 500); 
+        }
+
+        function safeNext() { if(bookInstance) bookInstance.flipNext(); }
+        function safePrev() { if(bookInstance) bookInstance.flipPrev(); }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "ArrowRight") safeNext();
+            if (e.key === "ArrowLeft") safePrev();
+        });
+
+        // --- SWIPE ---
+        let touchStartX = 0;
+        let touchEndX = 0;
+        stageContainer.addEventListener('touchstart', function(e) {
+            if (e.changedTouches.length > 1) return;
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        stageContainer.addEventListener('touchend', function(e) {
+            if (e.changedTouches.length > 1) return;
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (zoomOverlay.classList.contains('active')) return;
+            const threshold = 50; 
+            if (touchStartX - touchEndX > threshold) safeNext();
+            if (touchEndX - touchStartX > threshold) safePrev();
+        }
+
+        // Start
+        currentBookElement = null; 
+        loadBook(config.part1);
+
+    </script>
+</body>
+</html>
