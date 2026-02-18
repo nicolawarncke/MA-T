@@ -89,12 +89,11 @@
 
         /* --- MOBILE ANPASSUNG (Responsive) --- */
         @media (max-width: 768px) {
-            /* 1. Header anpassen (Linksbuendig) */
             .top-header {
                 padding: 15px 20px;
                 flex-direction: column;
-                align-items: flex-start; /* Links ausrichten */
-                text-align: left;       /* Text linksbündig */
+                align-items: flex-start; 
+                text-align: left;       
                 background: linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,0));
             }
             .header-title {
@@ -102,32 +101,27 @@
                 max-width: 100%;
                 margin-bottom: 0;
             }
-            .header-subtext {
-                display: none; 
-            }
+            .header-subtext { display: none; }
 
-            /* 2. Buch Größe */
             .book-wrapper {
                 max-width: 95vw; 
-                max-height: 60vh; /* Genug Platz für Header oben und Controls unten */
+                max-height: 60vh; 
                 margin-top: 20px;
             }
             
-            /* 3. Pfeile auf gleiche Höhe wie Wenden-Button */
             .nav-btn {
                 top: auto !important;
-                bottom: 28px !important; /* Auf einer Linie mit Flip-Button (ca. 30px) */
+                bottom: 28px !important; 
                 transform: none !important;
                 padding: 10px !important;
                 font-size: 24px !important;
                 background: transparent !important; 
-                width: 40px; /* Feste Breite für Touch */
+                width: 40px; 
                 text-align: center;
             }
             .nav-prev { left: 10px !important; }
             .nav-next { right: 10px !important; }
             
-            /* 4. Wende-Button mittig */
             .flip-btn-container {
                 left: 50% !important;
                 transform: translateX(-50%) !important;
@@ -140,19 +134,9 @@
                 white-space: nowrap;
             }
 
-            /* 5. Seitenzahl */
-            .page-info {
-                display: none !important;
-            }
-
-            .zoom-close-btn {
-                top: 10px !important;
-                right: 10px !important;
-            }
-
-            .scrub-tooltip {
-                display: none !important;
-            }
+            .page-info { display: none !important; }
+            .zoom-close-btn { top: 10px !important; right: 10px !important; }
+            .scrub-tooltip { display: none !important; }
         }
 
         /* SEITEN */
@@ -172,7 +156,7 @@
             cursor: default !important;
         }
 
-        /* --- UI ELEMENTE (Desktop Defaults) --- */
+        /* --- UI ELEMENTE --- */
         .nav-btn {
             position: fixed;
             top: 50%;
@@ -189,7 +173,7 @@
             outline: none;
             transition: color 0.3s, transform 0.3s;
         }
-        .nav-btn:hover { color: var(--accent-color); }
+        .nav-btn:hover { color: var(--accent-color); transform: scale(1.1); }
         .nav-prev { left: 10px; }
         .nav-next { right: 10px; }
 
@@ -258,6 +242,24 @@
         
         .progress-container:hover .progress-bar { height: 10px; }
 
+        /* NEU: Kapitelmarken */
+        .chapter-marker {
+            position: absolute;
+            bottom: 0;
+            width: 2px; /* Dünne Linie */
+            height: 10px; /* Standardhöhe */
+            background-color: rgba(0,0,0,0.3);
+            pointer-events: none;
+            z-index: 205;
+            transition: height 0.2s, background-color 0.2s;
+        }
+        
+        /* Wenn man über die Leiste fährt, werden die Marken deutlicher */
+        .progress-container:hover .chapter-marker {
+            height: 15px; 
+            background-color: rgba(0,0,0,0.6);
+        }
+
         /* --- THUMBNAIL TOOLTIP --- */
         .scrub-tooltip {
             position: absolute;
@@ -274,13 +276,26 @@
             z-index: 300;
         }
         .scrub-tooltip.visible { opacity: 1; }
+        
         .scrub-image {
             width: 60px; height: auto; object-fit: contain;
             background: transparent; margin-bottom: 5px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             background: white;
         }
-        .scrub-text { font-size: 10px; font-weight: bold; color: #333; background: white; padding: 2px 5px; border-radius: 4px; }
+        
+        /* Text angepasst für Kapitelname */
+        .scrub-text { 
+            font-size: 10px; 
+            font-weight: bold; 
+            color: #333; 
+            background: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            white-space: nowrap;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
 
         /* --- ZOOM OVERLAY --- */
         .zoom-overlay {
@@ -295,14 +310,13 @@
             max-width: 95%; max-height: 95%; object-fit: contain;
             box-shadow: 0 20px 50px rgba(0,0,0,0.2);
         }
-
         .zoom-close-btn {
             position: absolute; top: 30px; right: 40px;
             font-size: 40px; color: #333; cursor: pointer;
             z-index: 1001; line-height: 1; padding: 10px;
             transition: color 0.2s, transform 0.2s; font-family: sans-serif; font-weight: 100;
         }
-        .zoom-close-btn:hover { color: var(--accent-color); }
+        .zoom-close-btn:hover { color: var(--accent-color); transform: scale(1.1); }
 
     </style>
 </head>
@@ -329,7 +343,7 @@
 
     <div class="progress-container" id="progressContainer">
         <div class="progress-bar" id="progressBar"></div>
-    </div>
+        </div>
 
     <button class="nav-btn nav-prev" onclick="safePrev()">&lt;</button>
     <button class="nav-btn nav-next" onclick="safeNext()">&gt;</button>
@@ -347,7 +361,8 @@
     <div class="stage" id="stageContainer"></div>
 
     <script>
-        // --- KONFIGURATION ---
+        // --- KONFIGURATION MIT KAPITELN ---
+        // Hinweis: Seiten wurden um -1 verschoben
         const config = {
             part1: {
                 id: 1,
@@ -356,7 +371,21 @@
                 baseUrl: "./Teil-1/",
                 prefix: "Booklet_Teil%201_Seite-", 
                 extension: ".jpg",
-                count: 136 
+                count: 136,
+                chapters: [
+                    { page: 10, title: "Inhaltsverzeichnis" },
+                    { page: 11, title: "Abstrakt" },
+                    { page: 14, title: "Öffentliche Räume" },
+                    { page: 16, title: "Die kostenlose Stadt" },
+                    { page: 34, title: "Öffentliche Toiletten" },
+                    { page: 52, title: "Trinkwasserbrunnen" },
+                    { page: 58, title: "Essbare Stadt" },
+                    { page: 64, title: "Bibliotheken" },
+                    { page: 98, title: "Kulturläden" },
+                    { page: 112, title: "Jugendzentren" },
+                    { page: 130, title: "Quellenverzeichnis" },
+                    { page: 131, title: "Abbildungsverzeichnis" }
+                ]
             },
             part2: {
                 id: 2,
@@ -365,7 +394,16 @@
                 baseUrl: "./Teil-2/",
                 prefix: "Booklet_Teil%202_Seite-",
                 extension: ".jpg",
-                count: 106 
+                count: 106,
+                chapters: [
+                    { page: 10, title: "Inhaltsverzeichnis" },
+                    { page: 11, title: "Abstrakt" },
+                    { page: 14, title: "Der ideale Ort" },
+                    { page: 40, title: "Kontext" },
+                    { page: 63, title: "Bestand" },
+                    { page: 79, title: "Entwurf" },
+                    { page: 101, title: "Abbildungsverzeichnis" }
+                ]
             }
         };
 
@@ -408,6 +446,26 @@
             return html;
         }
 
+        // --- NEU: MARKER RENDERN ---
+        function renderChapterMarkers(cfg) {
+            // Alte Marker entfernen (außer ProgressBar)
+            const markers = document.querySelectorAll('.chapter-marker');
+            markers.forEach(m => m.remove());
+
+            if(!cfg.chapters) return;
+
+            cfg.chapters.forEach(chap => {
+                const marker = document.createElement('div');
+                marker.className = 'chapter-marker';
+                
+                // Position berechnen
+                const pct = (chap.page / cfg.count) * 100;
+                marker.style.left = `${pct}%`;
+                
+                progressContainer.appendChild(marker);
+            });
+        }
+
         // --- ZOOM ---
         function openZoom(url) {
             zoomImage.src = url;
@@ -431,18 +489,44 @@
             return targetPage;
         }
 
+        // Hilfsfunktion: Finde Kapitelname
+        function getChapterTitle(pageNum) {
+            if (!currentConfig.chapters) return "";
+            
+            // Suche das letzte Kapitel, dessen Seitenzahl <= pageNum ist
+            let title = "";
+            for (let i = 0; i < currentConfig.chapters.length; i++) {
+                if (pageNum >= currentConfig.chapters[i].page) {
+                    title = currentConfig.chapters[i].title;
+                } else {
+                    // Wenn wir an einem Kapitel vorbei sind, das größer ist, brechen wir ab
+                    break;
+                }
+            }
+            return title;
+        }
+
         progressContainer.addEventListener('mousemove', function(e) {
             if (!bookInstance) return;
             const targetPage = getPageFromMouse(e, this);
             const rect = this.getBoundingClientRect();
             const clickX = e.clientX - rect.left; 
             let leftPos = clickX + rect.left;
-            if (leftPos > window.innerWidth - 70) leftPos = window.innerWidth - 70;
-            if (leftPos < 70) leftPos = 70;
+            
+            if (leftPos > window.innerWidth - 100) leftPos = window.innerWidth - 100;
+            if (leftPos < 100) leftPos = 100;
 
             scrubTooltip.style.left = leftPos + 'px';
             scrubTooltip.classList.add('visible');
-            scrubText.innerText = `Seite ${targetPage}`;
+            
+            // NEU: Kapitelname anzeigen
+            const chapTitle = getChapterTitle(targetPage);
+            let text = `Seite ${targetPage}`;
+            if (chapTitle) {
+                text += `<br><span style="font-weight:normal; font-size:9px;">${chapTitle}</span>`;
+            }
+            scrubText.innerHTML = text;
+
             const imgUrl = `${currentConfig.baseUrl}${currentConfig.prefix}${pad(targetPage)}${currentConfig.extension}`;
             scrubImage.src = imgUrl;
         });
@@ -490,7 +574,10 @@
             newDiv.innerHTML = getImagesHTML(cfg);
             stageContainer.appendChild(newDiv);
             currentBookElement = newDiv;
+            
+            // UI Init
             updateUI(0, cfg.count, cfg);
+            renderChapterMarkers(cfg); // Marker setzen
 
             if (needsAnimation) {
                 setTimeout(() => {
