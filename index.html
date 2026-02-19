@@ -92,6 +92,7 @@
             .page-info { display: none !important; }
             .zoom-close-btn { top: 10px !important; right: 10px !important; }
             .scrub-tooltip { display: none !important; }
+            .map-overlay-btn { padding: 10px 20px !important; font-size: 12px !important; }
             
             /* Cursor */
             .page img { cursor: pointer !important; } /* Pointer signalisiert Klickbarkeit */
@@ -212,6 +213,60 @@
             touch-action: manipulation;
         }
         .zoom-close-btn:hover { color: var(--accent-color); }
+
+        /* --- KARTEN BUTTON & LADEKREIS --- */
+        .map-overlay-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--accent-color);
+            color: var(--text-on-accent);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            z-index: 10;
+            animation: pulse 2s infinite;
+            transition: background-color 0.3s;
+            white-space: nowrap;
+        }
+        .map-overlay-btn:hover {
+            animation: none;
+            background-color: #333; 
+            color: #fff;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(205, 183, 212, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(205, 183, 212, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(205, 183, 212, 0); }
+        }
+        
+        #zoomImage {
+            opacity: 0; 
+            transition: opacity 0.3s ease;
+        }
+        #zoomImage.loaded { opacity: 1; }
+
+        .loader {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: none; z-index: 1002;
+        }
+        .loader.active { display: block; }
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
     </style>
 </head>
 <body>
@@ -225,9 +280,10 @@
         </div>
     </div>
 
-    <div class="zoom-overlay" id="zoomOverlay" onclick="closeZoom()">
+   <div class="zoom-overlay" id="zoomOverlay" onclick="closeZoom()">
         <div class="zoom-close-btn" onclick="closeZoom()">&times;</div>
-        <img id="zoomImage" src="" alt="Zoom">
+        <div class="loader" id="zoomLoader"></div>
+        <img id="zoomImage" src="" alt="Zoom" onload="hideLoader()">
     </div>
 
     <div class="scrub-tooltip" id="scrubTooltip">
@@ -265,6 +321,8 @@
                 prefix: "Booklet_Teil%201_Seite-", 
                 extension: ".jpg",
                 count: 136,
+                mapPage: 19, 
+                          mapImage: "./Anlagen/die%20kostenlose%20Stadt%20NUE_Seite_1.jpg",
                 chapters: [
                     { page: 10, title: "Inhaltsverzeichnis" },
                     { page: 11, title: "Abstrakt" },
@@ -313,6 +371,7 @@
         const rootStyle = document.documentElement.style;
         const zoomOverlay = document.getElementById('zoomOverlay');
         const zoomImage = document.getElementById('zoomImage');
+        const zoomLoader = document.getElementById('zoomLoader');
         const scrubTooltip = document.getElementById('scrubTooltip');
         const scrubImage = document.getElementById('scrubImage');
         const scrubText = document.getElementById('scrubText');
@@ -326,12 +385,24 @@
             img.src = coverUrl;
         }
 
-        function getImagesHTML(cfg) {
+function getImagesHTML(cfg) {
             let html = '';
             html += `<div class="page page-ghost"></div>`;
             for(let i=1; i<=cfg.count; i++) {
                 const url = `${cfg.baseUrl}${cfg.prefix}${pad(i)}${cfg.extension}`;
-                html += `<div class="page" onclick="openZoom('${url}')"><img src="${url}" loading="lazy" /></div>`;
+                
+                // Abfrage, ob die Seite den Karten-Button bekommen soll
+                if (cfg.mapPage && i === cfg.mapPage) {
+                    html += `
+                    <div class="page" onclick="openZoom('${url}')">
+                        <img src="${url}" loading="lazy" />
+                        <button class="map-overlay-btn" onclick="openMap(event, '${cfg.mapImage}')">
+                            Stadtkarte auffalten
+                        </button>
+                    </div>`;
+                } else {
+                    html += `<div class="page" onclick="openZoom('${url}')"><img src="${url}" loading="lazy" /></div>`;
+                }
             }
             return html;
         }
@@ -350,14 +421,36 @@
         }
 
         // --- ZOOM (Wieder aktiviert für alle, da Browser-Zoom jetzt blockiert ist) ---
-        function openZoom(url) {
-            // KEINE Mobile-Sperre mehr, da der User Zoom per Klick wünscht
+
+function openZoom(url) {
+            zoomImage.classList.remove('loaded');
+            zoomLoader.classList.add('active');
             zoomImage.src = url;
             zoomOverlay.classList.add('active');
         }
+
+        function openMap(event, mapUrl) {
+            event.stopPropagation(); // Verhindert normalen Seiten-Zoom
+            zoomImage.classList.remove('loaded');
+            zoomLoader.classList.add('active');
+            zoomImage.src = mapUrl;
+            zoomOverlay.classList.add('active');
+        }
+
+        function hideLoader() {
+            if (zoomImage.getAttribute('src')) {
+                zoomLoader.classList.remove('active');
+                zoomImage.classList.add('loaded'); 
+            }
+        }
+
         function closeZoom() {
             zoomOverlay.classList.remove('active');
-            setTimeout(() => { zoomImage.src = ""; }, 300); 
+            setTimeout(() => { 
+                zoomImage.removeAttribute('src'); 
+                zoomImage.classList.remove('loaded');
+                zoomLoader.classList.remove('active');
+            }, 300); 
         }
 
         // --- MOUSE / SCRUBBING ---
