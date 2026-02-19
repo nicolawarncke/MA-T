@@ -239,6 +239,10 @@
             background-color: #333; 
             color: #fff;
         }
+        .book-wrapper:not(.is-initialized) .map-overlay-btn {
+            display: none;
+        }
+
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(205, 183, 212, 0.7); }
             70% { box-shadow: 0 0 0 15px rgba(205, 183, 212, 0); }
@@ -391,17 +395,23 @@ function getImagesHTML(cfg) {
             for(let i=1; i<=cfg.count; i++) {
                 const url = `${cfg.baseUrl}${cfg.prefix}${pad(i)}${cfg.extension}`;
                 
-                // Abfrage, ob die Seite den Karten-Button bekommen soll
+                // Prüfen, ob das die Seite mit der Karte ist
                 if (cfg.mapPage && i === cfg.mapPage) {
                     html += `
                     <div class="page" onclick="openZoom('${url}')">
-                        <img src="${url}" loading="lazy" />
+                        <div class="loader active"></div>
+                        <img src="${url}" loading="lazy" onload="this.previousElementSibling.classList.remove('active')" />
+                        
                         <button class="map-overlay-btn" onclick="openMap(event, '${cfg.mapImage}')">
                             Stadtkarte auffalten
                         </button>
                     </div>`;
                 } else {
-                    html += `<div class="page" onclick="openZoom('${url}')"><img src="${url}" loading="lazy" /></div>`;
+                    html += `
+                    <div class="page" onclick="openZoom('${url}')">
+                        <div class="loader active"></div>
+                        <img src="${url}" loading="lazy" onload="this.previousElementSibling.classList.remove('active')" />
+                    </div>`;
                 }
             }
             return html;
@@ -566,6 +576,7 @@ function openZoom(url) {
                 });
                 bookInstance.loadFromHTML(newDiv.querySelectorAll('.page'));
                 bookInstance.on('flip', (e) => updateUI(e.data, cfg.count, cfg));
+                newDiv.classList.add('is-initialized');
             }, 100);
         }
 
